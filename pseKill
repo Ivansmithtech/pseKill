@@ -1,0 +1,45 @@
+#!/bin/bash
+#Defines escalating kill method
+eSkill()
+{
+kill -15 $1 || kill -2 $1 || kill -1 $1 || kill -9 $pid
+}
+
+#Defines regex to match for either 4 or 5 digits (most 1, 2 and 3 digit PID's are Root)
+re='^([[:digit:]]{4}|[[:digit:]]{5})$'
+
+#Checks if given parameter is a possible PID, then calls kill method
+if [[ $1 =~ $re ]]; then
+  echo "running"
+  eSkill $1
+  exit
+fi
+
+#Creates current page from ps aux, then greps any lines containing the searched for parameter
+#It also removes lines which contain the command call and lines longer than 150 characters
+#lines longer than 150 characters are Generally sub processes?
+cPage=$(ps aux)
+gResult=$(echo "$cPage" | grep -ni $1 | sed '/pseKill/d' | sed '/^.\{150\}./d' )
+aLines=$(echo "$gResult" | wc -l)
+
+#Will check if there are more than 1 possible options for killing and present only its pid and pathname
+if [ $aLines -gt "1" ]; then
+  echo "$rLineNo"
+  echo -e "\e[1m\e[31mMultiple Results found:\e[0m"
+  echo "$gResult" | sed 's/.\{4\}\(.\{15\}\).\{63\}/\n\1/'
+  echo -e "\e[1m\e[32m\nPlease rerun command with specific name/location or PID\e[0m\n"
+  exit
+#will prompt when no results have been found
+elif [[ $gResult = "" ]]; then
+  echo "Nothing found"
+#will execute with the pid of found result
+else
+  echo "calling"
+  pid=$(echo "$gResult" | sed 's/[^[:space:]][^[:space:]]*[[:space:]][[:space:]]*\([0-9]\{1,5\}\).*/\1/')
+  echo "$pid"
+  eSkill $pid
+fi
+
+
+
+  # rLineNo=$(echo "$gResult" | sed 's/:.*//')
